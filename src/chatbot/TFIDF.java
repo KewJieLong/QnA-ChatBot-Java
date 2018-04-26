@@ -9,9 +9,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  *
@@ -25,20 +23,8 @@ public class TFIDF {
     private static ArrayList <HashMap<String, Double>>collectionTFDoc = new ArrayList();
     private static Utilities ult = new Utilities();
     private static Core core = new Core();
-    
-    private static ArrayList <String> commomWord = new ArrayList(){{
-        add("is");
-        add("are");
-        add("was");
-        add("were");        
-        add("when");
-        add("what");
-        add("who");
-        add("why");
-        add("where");
-        add("how");              
-    }};;
     private static int line = 0;
+
     
     public TFIDF(){        
         initSetup(DOCUMENTSPATH);
@@ -67,85 +53,87 @@ public class TFIDF {
         }                      
     }
             
-    public static int getHighestTFIDFIndex(String term){
-        Double maxTfIdf = 0.0;
-        int maxIndex = 0;
-        int index = 0;
+    public static int [] get3HighestTFIDFIndex(String term){
+        int [] large = new int[10];
         if(collectionTFDoc.isEmpty()){
-            return -1;
+            return new int[0];
         }
-        
-        for(HashMap hm: collectionTFDoc){               
-            if(hm.containsKey(term)){
+
+        HashMap<Integer, Double> termTf = new HashMap<>();
+        for(int i = 0; i < collectionTFDoc.size(); i ++){
+            if(collectionTFDoc.get(i).containsKey(term)){
+                termTf.put(i, collectionTFDoc.get(i).get(term));
+            }
+        }
+
+        if(termTf.isEmpty()){  return new int[]{-1, -1, -1, -1, -1};}
+
+
+        double max = 0;
+        int maxIndex = -1;
+        for(int i = 0; i < large.length; i ++){
+            for(Map.Entry<Integer, Double> entry: termTf.entrySet()){
                 System.out.println("calculating " + term);
-                System.out.println("TFDoc: " + hm.get(term) );
-                System.out.println("IDFWord: " + wordIDF.get(term));
-                double TfIdf = (double)hm.get(term) * wordIDF.get(term);
-                if(maxTfIdf < TfIdf){
-                    maxTfIdf = TfIdf;
-                    maxIndex = index;
+                System.out.println("TFDoc: " + entry.getValue());
+                System.out.println("IDFWord: " + getIDF(term));
+                System.out.println("TFIDF: " + Double.toString(entry.getValue() * getIDF(term)));
+                System.out.println("doc: " + getDoc(entry.getKey()));
+                System.out.println();
+                double tfIdf = entry.getValue() * wordIDF.get(term);
+                if(max < tfIdf){
+                    max = tfIdf;
+                    maxIndex = entry.getKey();
                 }
-            }         
-            index ++;
+            }
+
+            System.out.println("match doc: " + getDoc(maxIndex));
+            large[i] = maxIndex;
+            termTf.put(maxIndex, Double.MIN_VALUE);
+            maxIndex = -1;
+            max = Double.MIN_VALUE;
         }
-        
-        return maxIndex;
+
+        System.out.println(Arrays.toString(large));
+        return large;
+    }
+
+    public static Double getIDF(String term){
+        if(wordIDF.containsKey(term)){
+            return wordIDF.get(term);
+        }
+        return 0.0;
     }
     
-    public static String getHighestTFIDFDoc(String term){
-        Double maxTfIdf = 0.0;
-        int maxIndex = 0;
+    public static String [] getDocs(int[] docsIndex){
+        System.out.println(Arrays.toString(docsIndex));
+        ArrayList<String> d = new ArrayList<>();
         int index = 0;
-        for(HashMap hm: collectionTFDoc){                        
-            if(hm.containsKey(term)){
-                double TfIdf = (double)hm.get(term) * wordIDF.get(term);
-                if(maxTfIdf < TfIdf){
-                    maxTfIdf = TfIdf;
-                    maxIndex = index;
+        for(int i: docsIndex){
+            if(i >= 0){
+                System.out.println("check i : " + i);
+                if(!d.contains(docs.get(i))){
+                    d.add(docs.get(i));
+                    index ++;
                 }
-            }         
-            index ++;
+            }
         }
-        
-        return docs.get(maxIndex);
+
+        return d.toArray(new String[index]);
     }
     
     public static String getDoc(int index){
-        return docs.get(index);
+        System.out.println(index);
+        System.out.println(docs.size());
+        if(index >= 0){
+            return docs.get(index);
+        }
+        return "";
     }
-    
-    public static String getMostReleventDoc(String[]tokens){        
-        ArrayList <Integer> docsIndex = new ArrayList<>();        
-        for(String t:tokens){
-            if(!commomWord.contains(t)){
-                System.out.println("");
-                System.out.println("no common word: " + t);
-                int hindex = getHighestTFIDFIndex(t);
-                if(hindex >= 0){
-                    docsIndex.add(hindex);                          
-                }                
-            }            
-        }
-        
-        System.out.println("docsIndex: " );
-        for(int i: docsIndex){
-            System.out.println(docs.get(i));
-        }
-        
-//        ult.printArray(docsIndex);
 
-        if(docsIndex.isEmpty()){
-            return "";
-        }
-        int [] dIndex = core.arrayListToArray(docsIndex);
-        int mostFeqI = core.mostFrequent(dIndex);
-        
-        return docs.get(mostFeqI);                        
-    }
     
     public static void addDoc(String sentence, boolean calIDF, boolean saveFile){
         // add doc only when docs do not have this sentence 
-        if(!docs.contains(sentence)){
+        if(!ult.containsCaseInsensitive(sentence, docs)){
             line++;
             try{
                 sentence = sentence.replaceAll("[^A-Za-z]+", " ");
@@ -154,9 +142,7 @@ public class TFIDF {
 
                 HashMap<String, Integer> wordFeqDoc = new HashMap<>();
                 HashMap<String, Double> TFDoc = new HashMap<>();
-                for(String s: words){
-                    String w = s.toLowerCase();
-
+                for(String w: words){
                     // WordFeq for ALL Document
                     if(wordFeq.containsKey(w)){                        
                         wordFeq.put(w, wordFeq.get(w) + 1);                                                
@@ -193,7 +179,7 @@ public class TFIDF {
 
                 if(saveFile){
                     PrintWriter pw = new PrintWriter(new FileOutputStream(DOCUMENTSPATH, true));
-                    pw.write(sentence.toLowerCase());
+                    pw.write(sentence);
                     pw.write("\n");
                     pw.close();
                 }            

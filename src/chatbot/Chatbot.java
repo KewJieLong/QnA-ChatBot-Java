@@ -27,7 +27,8 @@ public class Chatbot {
         
         while(true){
             String input_kb = kb.nextLine();
-            core.reply(input_kb);
+            System.out.println();
+            System.out.println("bot: " + core.reply(input_kb));
             
             
 //            for(int i: ult.nounIndex(tags)){

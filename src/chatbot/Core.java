@@ -29,8 +29,7 @@ public class Core {
    
     public static String reply(String sentence){
         String [] tags = posTagger.tag(sentence);
-        String [] token = tokenize(sentence);
-
+        String [] token = ult.tokenize(sentence);
         for(String t: tags){
             System.out.print(t + " ");
         }
@@ -40,72 +39,23 @@ public class Core {
             System.out.print(t + " ");
         }
 
-        System.out.println("Most relevent text: " + tfidf.getMostReleventDoc(token));
-
         // do not save question to docs
         if(isSave(token, tags)){
             tfidf.addDoc(sentence, true, true);
         }
 
-        if(isAsking(token)){
-            return tfidf.getMostReleventDoc(token);
-        }else{
+        Question question = null;
+        int questionT = 0;
+        if((questionT = isAsking(token)) >= 0){
+            question = new Question(tags, token, tfidf, ult, posTagger, questionT);
+            return question.answer();
+        } else {
             return acceptedReply[rand.nextInt(acceptedReply.length)];
         }
-
     }
 
 
 
-    public static ArrayList<Integer> nounIndex(String [] tags){
-        ArrayList <Integer> tagIndex = new ArrayList<>();
-        ArrayList<String>nounTags = new ArrayList<String>(){{
-            add("NN");
-            add("NNS");
-            add("NNP");
-            add("NNPS");
-        }};
-
-        int index = 0;
-        for(String t: tags){
-            if (nounTags.contains(t)){
-                tagIndex.add(index);
-            }
-
-            index ++;
-        }
-
-        return tagIndex;
-    }
-
-
-
-    public static ArrayList<Integer> verbIndex(String [] tags){
-        ArrayList <Integer> tagIndex = new ArrayList<>();
-        ArrayList<String>nounTags = new ArrayList<String>(){{
-            add("VB");
-            add("VBD");
-            add("VBG");
-            add("VBN");
-            add("VBP");
-            add("VBZ");
-        }};
-        
-        int index = 0;
-        for(String t: tags){
-            if (nounTags.contains(t)){
-                tagIndex.add(index);
-            }
-            
-            index ++;
-        }
-        
-        return tagIndex;
-    }
-
-    public static String [] tokenize(String sentence){
-        return sentence.split(" ");
-    }
     
     public static boolean isCompleteSentence(String[] token, String[] tags){
         if(token.length < 2){
@@ -130,7 +80,7 @@ public class Core {
 //        return true;
 //    }
     
-    public static boolean isAsking(String [] token){
+    public static int isAsking(String [] token){
         ArrayList <String> questionWords = new ArrayList<String>(){{
             add("when");
             add("what");
@@ -140,16 +90,18 @@ public class Core {
             add("how");
         }};
 
+        int index = 0;
         for(String t: token){
             if(questionWords.contains(t.toLowerCase())){
-                return true;
+                return index;
             }
+            index ++;
         }
-        return false;
+        return -1;
     }
     
     public static boolean isSave(String [] token, String[] tags){
-        if(isAsking(token)){return false;}        
+        if(isAsking(token) >= 0){return false;}
         if(!isCompleteSentence(token, tags)){return false;}
         return true;
     }
