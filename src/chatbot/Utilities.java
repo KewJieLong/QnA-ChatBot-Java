@@ -32,7 +32,7 @@ public class Utilities {
         add("NNPS");
     }};
 
-    public static ArrayList<String> properNountTags = new ArrayList<String> () {{
+    public static ArrayList<String> properNounTags = new ArrayList<String> () {{
         add("NNPS");
         add("NNP");
     }};
@@ -41,6 +41,29 @@ public class Utilities {
         add("VB");
         add("VBD");
         add("VBG");
+    }};
+
+    public static ArrayList<String> adjectiveTags = new ArrayList<String> () {{
+        add("JJ");
+        add("JJR");
+        add("JJS");
+    }};
+
+    public static ArrayList<String> prepositionTags = new ArrayList<String> () {{
+        add("IN");
+    }};
+
+    private static ArrayList <String> commomWord = new ArrayList(){{
+        add("is");
+        add("are");
+        add("was");
+        add("were");
+        add("when");
+        add("what");
+        add("who");
+        add("why");
+        add("where");
+        add("how");
     }};
 
     public Utilities(){}
@@ -68,6 +91,10 @@ public class Utilities {
         }
     }
 
+    public static boolean isCommonWord(String w){
+        return commomWord.contains(w);
+    }
+
     public static String [] tokenize(String sentence){
         return sentence.split(" ");
     }
@@ -85,6 +112,89 @@ public class Utilities {
         }
 
         return tagIndex;
+    }
+
+    public static ArrayList <Integer> findObjectIndex(String [] tags, String [] tokens, String action){
+        ArrayList<Integer>verbIndex = findTagIndex(tags, firstPersonVerbTags);
+        ArrayList<Integer>objectIndex = new ArrayList<>();
+        for(int i = 0; i < verbIndex.size(); i ++){
+            System.out.println("verbindex = " + verbIndex.get(i));
+            if(action.equals(tokens[verbIndex.get(i)])){
+                for(int j = verbIndex.get(i); j >= 0; j --){
+                    System.out.println("tags = " + tags[j]);
+                    if(nounTags.contains(tags[j])){
+                        System.out.println("MATCH");
+                        objectIndex.add(j);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return objectIndex;
+    }
+
+    public static ArrayList <Integer> findActionIndex(String [] tags, String [] tokens, String object){
+        System.out.println(Arrays.toString(tags));
+        ArrayList<Integer>nounIndex = findTagIndex(tags, nounTags);
+        ArrayList<Integer>actionIndex = new ArrayList<>();
+        for(int i = 0; i < nounIndex.size(); i ++){
+            System.out.println("action object :" + tokens[nounIndex.get(i)]);
+            if(object.equals(tokens[nounIndex.get(i)])){
+                System.out.println("FK");
+                for(int j = nounIndex.get(i) + 1; j < tags.length; j ++){
+                    if(firstPersonVerbTags.contains(tags[j])){
+                        actionIndex.add(j);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return actionIndex;
+    }
+
+    public static ArrayList<Integer> findTargetIndex(String [] tags, String [] tokens, String action){
+        ArrayList<Integer>verbIndex = findTagIndex(tags, firstPersonVerbTags);
+        ArrayList<Integer>targetIndex = new ArrayList<>();
+        for(int i = 0; i < verbIndex.size(); i ++){
+            if(action.equals(tokens[verbIndex.get(i)])){
+                for(int j = verbIndex.get(i); j < tags.length; j ++){
+                    System.out.println("tags = " + tags[j]);
+                    if(nounTags.contains(tags[j])){
+                        System.out.println("MATCH");
+                        targetIndex.add(j);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return targetIndex ;
+    }
+
+    public static String [] cropArray(int startIndex, int endIndex, String[]arr){
+        int length = endIndex - startIndex;
+        String [] newArr = new String[length];
+        if(endIndex > startIndex){
+            int index = 0;
+            for(int i = startIndex; i < endIndex; i++){
+                newArr[index] = arr[i];
+                index ++;
+            }
+
+            return newArr;
+        }
+        return newArr;
+    }
+
+    public static String arrayToSring(String [] arr){
+        String re = "";
+        for(String e: arr){
+            re += e + " ";
+        }
+
+        return re;
     }
 
     public static boolean containsCaseInsensitive(String s, ArrayList<String> l){
@@ -114,4 +224,28 @@ public class Utilities {
 
         return "";
     }
+
+    public static double calCosineSimilarity(double[]docTFIDF, double[]queryTFIDF, double vectorLengthDoc,
+                                             double vectorLengthQuery){
+        double value = 0;
+        for(int i = 0; i < docTFIDF.length; i ++){
+            value += docTFIDF[i] * queryTFIDF[i];
+        }
+
+        value = value / (vectorLengthDoc * vectorLengthQuery);
+
+        return value;
+    }
+
+    public static String [] subArray(String [] arr, int start, int end){
+        String [] newArr = new String[end - start];
+        int index = 0;
+        for(int i = start; i < end; i++){
+            newArr[index] = arr[i];
+            index ++;
+        }
+
+        return newArr;
+    }
+
 }
