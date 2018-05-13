@@ -52,11 +52,15 @@ public class TFIDF {
             }                       
         }                      
     }
-            
-    public static int [] get3HighestTFIDFIndex(String term){
-        int [] large = new int[10];
+
+    public static int getDocsSize(){
+        return collectionTFDoc.size();
+    }
+
+    public static int [] getNHighestTFIDFIndex(String term, int top){
+        int [] large = new int[top];
         if(collectionTFDoc.isEmpty()){
-            return new int[0];
+            return large;
         }
 
         HashMap<Integer, Double> termTf = new HashMap<>();
@@ -66,19 +70,21 @@ public class TFIDF {
             }
         }
 
-        if(termTf.isEmpty()){  return new int[]{-1, -1, -1, -1, -1};}
-
+        if(termTf.isEmpty()){
+            Arrays.fill(large, -1);
+            return large;
+        }
 
         double max = 0;
         int maxIndex = -1;
         for(int i = 0; i < large.length; i ++){
             for(Map.Entry<Integer, Double> entry: termTf.entrySet()){
-                System.out.println("calculating " + term);
-                System.out.println("TFDoc: " + entry.getValue());
-                System.out.println("IDFWord: " + getIDF(term));
-                System.out.println("TFIDF: " + Double.toString(entry.getValue() * getIDF(term)));
-                System.out.println("doc: " + getDoc(entry.getKey()));
-                System.out.println();
+//                System.out.println("calculating " + term);
+//                System.out.println("TFDoc: " + entry.getValue());
+//                System.out.println("IDFWord: " + getIDF(term));
+//                System.out.println("TFIDF: " + Double.toString(entry.getValue() * getIDF(term)));
+//                System.out.println("doc: " + getDoc(entry.getKey()));
+//                System.out.println();
                 double tfIdf = entry.getValue() * wordIDF.get(term);
                 if(max < tfIdf){
                     max = tfIdf;
@@ -86,7 +92,6 @@ public class TFIDF {
                 }
             }
 
-            System.out.println("match doc: " + getDoc(maxIndex));
             large[i] = maxIndex;
             termTf.put(maxIndex, Double.MIN_VALUE);
             maxIndex = -1;
@@ -102,6 +107,46 @@ public class TFIDF {
             return wordIDF.get(term);
         }
         return 0.0;
+    }
+
+    public static Double calTfIDF(int docsIndex, String term){
+        return collectionTFDoc.get(docsIndex).get(term) * getIDF(term);
+    }
+
+    public static Double calTfIDF(double tf, String term){
+        return tf * getIDF(term);
+    }
+
+    public static double [][] calTfIDF(String [] tokens) {
+        // if dont have any docs
+        if (collectionTFDoc.isEmpty()) {
+            return new double[0][0];
+        }
+
+        double[][] TfIDFmatrix = new double[collectionTFDoc.size()][tokens.length];
+
+        int tokenI = 0;
+        for (String t : tokens) {
+            HashMap<Integer, Double> termTf = new HashMap<>();
+            for (int i = 0; i < collectionTFDoc.size(); i++) {
+                if (collectionTFDoc.get(i).containsKey(t)) {
+                    termTf.put(i, collectionTFDoc.get(i).get(t));
+                }
+            }
+
+            if (termTf.isEmpty()) {
+                tokenI++;
+                continue;
+            }
+
+            for (Map.Entry<Integer, Double> entry : termTf.entrySet()) {
+                TfIDFmatrix[entry.getKey()][tokenI] = entry.getValue() * wordIDF.get(t);
+            }
+
+            tokenI++;
+        }
+
+        return TfIDFmatrix;
     }
     
     public static String [] getDocs(int[] docsIndex){
@@ -122,8 +167,6 @@ public class TFIDF {
     }
     
     public static String getDoc(int index){
-        System.out.println(index);
-        System.out.println(docs.size());
         if(index >= 0){
             return docs.get(index);
         }

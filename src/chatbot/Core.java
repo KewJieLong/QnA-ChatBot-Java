@@ -44,11 +44,11 @@ public class Core {
             tfidf.addDoc(sentence, true, true);
         }
 
-        Question question = null;
         int questionT = 0;
         if((questionT = isAsking(token)) >= 0){
-            question = new Question(tags, token, tfidf, ult, posTagger, questionT);
-            return question.answer();
+            Question question = new Question(tags, token, tfidf, ult, posTagger, questionT);
+            String answer = question.answer();
+            return answer;
         } else {
             return acceptedReply[rand.nextInt(acceptedReply.length)];
         }
@@ -90,12 +90,10 @@ public class Core {
             add("how");
         }};
 
-        int index = 0;
         for(String t: token){
             if(questionWords.contains(t.toLowerCase())){
-                return index;
+                return questionWords.indexOf(t.toLowerCase());
             }
-            index ++;
         }
         return -1;
     }
