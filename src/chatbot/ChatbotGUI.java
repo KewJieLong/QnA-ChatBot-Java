@@ -1,6 +1,7 @@
 package chatbot;
 
 
+import javax.script.ScriptException;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -8,7 +9,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 
 public class ChatbotGUI implements WindowListener {
-    private int width = 350;
+    private int width = 550;
     private int height = 700;
 
     private Chatbot chatbot;
@@ -33,7 +34,11 @@ public class ChatbotGUI implements WindowListener {
             } else {
                 messageArea.append(String.format("You: " + message + "\n"));
                 System.out.println("---------------------------------------------------------------------------");
-                message = core.reply(message);
+                try {
+                    message = core.reply(message);
+                } catch (ScriptException e1) {
+                    e1.printStackTrace();
+                }
                 System.out.println("---------------------------------------------------------------------------");
                 messageArea.append(String.format("Bot: " + message + "\n"));
             }
