@@ -53,7 +53,27 @@ public class Utilities {
         add("IN");
     }};
 
-    private static ArrayList <String> commomWord = new ArrayList(){{
+    public static ArrayList<String> objectTags = new ArrayList<String> () {{
+        add("NN");
+        add("NNS");
+        add("NNP");
+        add("NNPS");
+        add("PRP");
+    }};
+
+    public static ArrayList<String> locationWord = new ArrayList<String> () {{
+       add("in");
+       add("at");
+    }};
+
+    public static ArrayList<String> timeWord = new ArrayList<String> () {{
+       add("morning");
+       add("afternoon");
+       add("evening");
+       add("night");
+    }};
+
+    public static ArrayList <String> commomWord = new ArrayList<String>(){{
         add("is");
         add("are");
         add("was");
@@ -65,6 +85,25 @@ public class Utilities {
         add("where");
         add("how");
     }};
+
+    public static ArrayList<String> mathOperator = new ArrayList<String>(){{
+        add("+");
+        add("-");
+        add("*");
+        add("/");
+        add("%");
+    }};
+
+    public static ArrayList <String> questionWords = new ArrayList<String>(){{
+        add("when");
+        add("what");
+        add("who");
+        add("why");
+        add("where");
+        add("how");
+    }};
+
+
 
     public Utilities(){}
     
@@ -248,4 +287,13 @@ public class Utilities {
         return newArr;
     }
 
+    public static boolean isNumeric(String str){
+        try{
+            double d = Double.parseDouble(str);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        return true;
+    }
 }

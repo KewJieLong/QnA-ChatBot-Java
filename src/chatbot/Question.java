@@ -1,5 +1,8 @@
 package chatbot;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,19 +66,19 @@ public class Question {
         System.out.println("Question type = " + questionType);
         calQueryTfIDF();
         identifyComponent();
-        analysis();
+//        analysis();
         analysis_v2();
 
-        System.out.println("Token To docs:");
-        for(Map.Entry<String, String[]> entry: tokenToDocs.entrySet()){
-            System.out.println(entry.getKey() + " : " + Arrays.toString(entry.getValue()));
-        }
-
-        System.out.println();
-        System.out.println("docs feq");
-        for(Map.Entry<String, Integer> entry: docsFeq.entrySet()){
-            System.out.println(entry.getKey() + " : " + entry.getValue());
-        }
+//        System.out.println("Token To docs:");
+//        for(Map.Entry<String, String[]> entry: tokenToDocs.entrySet()){
+//            System.out.println(entry.getKey() + " : " + Arrays.toString(entry.getValue()));
+//        }
+//
+//        System.out.println();
+//        System.out.println("docs feq");
+//        for(Map.Entry<String, Integer> entry: docsFeq.entrySet()){
+//            System.out.println(entry.getKey() + " : " + entry.getValue());
+//        }
     }
 
     public static void identifyComponent(){
@@ -84,11 +87,11 @@ public class Question {
         int actionIndex = 0;
         for(String tag: tags){
             if(!ult.isCommonWord(tokens[index])){
-                if(ult.properNounTags.contains(tag)){
+                if(ult.nounTags.contains(tag)){
                     object = tokens[index];
                 }
 
-                if(ult.firstPersonVerbTags.contains(tag)){
+                if(ult.verbTags.contains(tag)){
                     action = tokens[index];
                     actionIndex = index;
                 }
@@ -116,7 +119,6 @@ public class Question {
 
     // use top 5 cosine similarity to construct answer
     public static void analysis_v2(){
-        int nTop = 10;
         double [] queryTfIDF = new double[tokens.length];
         double [][] TfIDFmatrix = tfIdf.calTfIDF(tokens);
 
@@ -174,8 +176,6 @@ public class Question {
                 }
             }
 
-            System.out.println(maxCosineSimi);
-            System.out.println(tfIdf.getDoc(maxIndex));
             if(maxIndex >= 0){
                 topCosineSimis[i] = copyCosineSimilarity[maxIndex];
                 topCosineSdocsIndex[i] = maxIndex;
@@ -192,8 +192,40 @@ public class Question {
         }
 
         ArrayList<String> ans = new ArrayList<>();
-        // What
-        if(questionType == 1) {
+        // When
+        if(questionType == 0){
+            if(object == null){
+                // Dont have object and action
+                if(action == null){
+                    ans.add("I am sorry, i don't understand your question");
+                } else {
+                    // when is running
+                    // when \VERB\
+                    ans.add("Who or what " + action + "Please tell me more");
+                }
+            } else {
+                // When is Kew
+                // when \NOUN\
+                if(action == null){
+                    ans.add("i am not sure what you are asking... Please tell me more about " + object);
+                } else {
+                    // When is Kew running
+                    // When \NOUN\ \VERB\
+                    for(int docIndex: topCosineSdocsIndex){
+                        String doc = tfIdf.getDoc(docIndex);
+                        String [] docTag = tagger.tag(doc);
+                        String [] tks = ult.tokenize(doc);
+                        String t = findTime(tks, docTag);
+                        if(!t.isEmpty()){ ans.add(t); }
+                    }
+
+                    if(ans.size() == 0){
+                        ans.add("i don't know when is " + object + " " + action + "... Please tell me");
+                    }
+                }
+            }
+        // WWhat
+        } else if(questionType == 1) {
             if (object == null) {
                 if (action == null) {
                     // don't have object and action
@@ -306,6 +338,10 @@ public class Question {
                             ans = defs;
                         }
                     }
+
+                    if(ans.size() == 0){
+                        ans.add("i don't know this person, Please tell me more about " + object);
+                    }
                 } else {
                     // who is Kew running?
                     ans.add("I am not sure what you are trying to ask :(");
@@ -335,18 +371,64 @@ public class Question {
                         String doc = tfIdf.getDoc(docIndex);
                         String [] docTag = tagger.tag(doc);
                         String [] tks = ult.tokenize(doc);
-                        String r = findReason(tks, docTag, action);
+                        String r = findReason(tks, docTag, object, action);
                         if(!r.isEmpty()) {reasons.add(r);}
                     }
 
                     if(reasons.size() > 0){ ans = reasons; }
                 }
             }
+
+            if(ans.size() == 0){
+                ans.add(object + " " + action + " without a reason, maybe you can tell me about that.");
+            }
+        // Where
+        } else if(questionType == 4){
+            if(object == null){
+                if(action == null){
+                    ans.add("I am sorry, i can't understand your question");
+                } else {
+                    // Where is running
+                    // Where \NOUN\
+                    ans.add("What or Who " + action + "? Please tell me more :)");
+                }
+            } else {
+                // Where is Kew
+                // Where \NOUN\
+                // &
+                // Where is Kew running
+                // Where \NOUN\ \VERB\
+                ArrayList<String> places = new ArrayList<>();
+                for(int docIndex: topCosineSdocsIndex){
+                    String doc = tfIdf.getDoc(docIndex);
+                    String [] docTag = tagger.tag(doc);
+                    String [] tks = ult.tokenize(doc);
+                    String place = findPlace(tks, docTag);
+                    if(!place.isEmpty()){ places.add(place); }
+                }
+
+                if(places.size() > 0){ ans = places; }
+
+                if(ans.size() == 0){
+                    ans.add("i don't know where is " + object + ". Please tell me..");
+                }
+            }
+        // How
+        } else if(questionType == 5){
+          //
         }
 
-        System.out.println("ans for analysis v2:");
+//        System.out.println("ans for analysis v2:");
+
+        // clean the ans first
+        mostReleventDoc = "";
         for(String a: ans){
-            System.out.println(a);
+            mostReleventDoc += a + "\n";
+//            System.out.println(a);
+        }
+
+        if(ans.size() == 0){
+            mostReleventDoc = "i can't understand you :(";
         }
     }
 
@@ -535,6 +617,8 @@ public class Question {
     }
 
 
+
+
     public static void answerFormating(String[] tags, String [] tokens, HashMap<String, String[]>tokenToDocs){
         ArrayList <Integer> targetIndex = null;
         ArrayList <String> targetNoun = new ArrayList<>();
@@ -558,8 +642,16 @@ public class Question {
 
     }
 
+
     public static String answer(){
         return mostReleventDoc;
+    }
+
+    public static String ansMath() throws ScriptException {
+        ScriptEngineManager manager = new ScriptEngineManager();
+        ScriptEngine engine = manager.getEngineByName("js");
+        String result = String.valueOf(engine.eval(ult.arrayToSring(tokens)));
+        return result;
     }
 
 
@@ -636,8 +728,12 @@ public class Question {
         return targets;
     }
 
-    public static String findReason(String [] tokens, String [] tags, String action){
+    public static String findReason(String [] tokens, String [] tags, String object, String action){
         String reason = "";
+        if(!ult.arrayToSring(tokens).contains(object)){
+            return "";
+        }
+
         for(int i = 0; i < tokens.length; i ++){
             String t = tokens[i];
             if(t.equalsIgnoreCase("because")){
@@ -647,5 +743,45 @@ public class Question {
         }
 
         return reason;
+    }
+
+    public static String findPlace(String[] tokens, String[] tags){
+        String place = "";
+        for(int i = 0; i < tokens.length; i ++){
+            if(ult.locationWord.contains(tokens[i].toLowerCase())){
+                for(int j = i + 1; j < tokens.length; j ++){
+                    if(ult.nounTags.contains(tags[j]) && !ult.isNumeric(tokens[j]) && !ult.timeWord.contains(tokens[j])){
+                        int stopIndex = j;
+                        for(int k = j; k < tokens.length; k ++){
+                            if(ult.nounTags.contains(tags[k])){
+                              stopIndex = k;
+                            } else {
+                                break;
+                            }
+                        }
+                        place = ult.arrayToSring(ult.subArray(tokens, i, stopIndex + 1));
+                        break;
+                    }
+                }
+            }
+        }
+
+        return place;
+    }
+
+    public static String findTime(String[] tokens, String[] tags){
+        String time = "";
+        for(int i = 0; i < tokens.length; i ++){
+            if(ult.locationWord.contains(tokens[i].toLowerCase())){
+                for(int j = i; j < tokens.length; j ++){
+                    if((ult.isNumeric(tokens[j])) || ult.timeWord.contains(tokens[j])){
+                        time = ult.arrayToSring(ult.subArray(tokens, i, j + 1));
+                        break;
+                    }
+                }
+            }
+        }
+
+        return time;
     }
 }

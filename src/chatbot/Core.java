@@ -5,6 +5,7 @@
  */
 package chatbot;
 
+import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +28,7 @@ public class Core {
     
     public Core(){}
    
-    public static String reply(String sentence){
+    public static String reply(String sentence) throws ScriptException {
         String [] tags = posTagger.tag(sentence);
         String [] token = ult.tokenize(sentence);
         for(String t: tags){
@@ -39,18 +40,26 @@ public class Core {
             System.out.print(t + " ");
         }
 
-        // do not save question to docs
-        if(isSave(token, tags)){
-            tfidf.addDoc(sentence, true, true);
-        }
-
-        int questionT = 0;
+        int questionT = -1;
+        Question question = null;
         if((questionT = isAsking(token)) >= 0){
-            Question question = new Question(tags, token, tfidf, ult, posTagger, questionT);
+            question = new Question(tags, token, tfidf, ult, posTagger, questionT);
             String answer = question.answer();
             return answer;
-        } else {
+        } else if((questionT = isMathQues(sentence)) >= 0) {
+            System.out.println("Math question");
+            question = new Question(tags, token, tfidf, ult, posTagger, questionT);
+            String answer = question.ansMath();
+            return answer;
+        }
+
+        // do not save question to docs
+        if(isSave(token, tags)){
+            System.out.println("Saving");
+            tfidf.addDoc(sentence, true, true);
             return acceptedReply[rand.nextInt(acceptedReply.length)];
+        } else {
+            return "I don't understand what you are saying";
         }
     }
 
@@ -61,12 +70,21 @@ public class Core {
         if(token.length < 2){
             return false;
         }
-        
-//        for(String t: tags){
-//            
-//        }
-        
-        return true;
+
+        boolean hvObj = false;
+        boolean hvAction = false;
+        for(String t: tags){
+            if(ult.objectTags.contains(t)){
+                hvObj = true;
+            }
+
+            if(ult.verbTags.contains(t)){
+                hvAction = true;
+            }
+        }
+
+        if(hvObj && hvAction) { return true; }
+        return false;
     }
     
 //    public static boolean isCorrectGrammer(String[] tags){
@@ -81,18 +99,20 @@ public class Core {
 //    }
     
     public static int isAsking(String [] token){
-        ArrayList <String> questionWords = new ArrayList<String>(){{
-            add("when");
-            add("what");
-            add("who");
-            add("why");
-            add("where");
-            add("how");
-        }};
-
         for(String t: token){
-            if(questionWords.contains(t.toLowerCase())){
-                return questionWords.indexOf(t.toLowerCase());
+            if(ult.questionWords.contains(t.toLowerCase())){
+                System.out.printf("Asking word:");
+                System.out.println(t);
+                return ult.questionWords.indexOf(t.toLowerCase());
+            }
+        }
+        return -1;
+    }
+
+    public static int isMathQues(String sentence){
+        for(char s: sentence.toCharArray()){
+            if(ult.mathOperator.contains(String.valueOf(s))){
+                return ult.mathOperator.indexOf(String.valueOf(s));
             }
         }
         return -1;

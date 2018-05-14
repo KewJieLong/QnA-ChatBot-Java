@@ -5,6 +5,7 @@
  */
 package chatbot;
 
+import javax.script.ScriptException;
 import java.util.Scanner;
 
 /**
@@ -16,7 +17,7 @@ public class Chatbot {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ScriptException {
         Scanner kb = new Scanner(System.in);
 //        NN_PosTagger posTagger = new NN_PosTagger();
 //        TFIDF tfidf = new TFIDF();

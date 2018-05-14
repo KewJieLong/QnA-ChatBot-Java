@@ -179,7 +179,7 @@ public class TFIDF {
         if(!ult.containsCaseInsensitive(sentence, docs)){
             line++;
             try{
-                sentence = sentence.replaceAll("[^A-Za-z]+", " ");
+                sentence = sentence.replaceAll("[^A-Za-z0-9]+", " ");
                 String [] words = sentence.split(" ");
                 docs.add(sentence);
 
