@@ -87,8 +87,8 @@ public class Question {
         int actionIndex = 0;
         for(String tag: tags){
             if(!ult.isCommonWord(tokens[index])){
-                if(ult.nounTags.contains(tag)){
-                    object = tokens[index];
+                if(ult.nounTags.contains(tag) && !ult.timeWord.contains(tokens[index])){
+                    object = ult.findObjectIndex(tokens, tags);
                 }
 
                 if(ult.verbTags.contains(tag)){
@@ -194,44 +194,24 @@ public class Question {
         ArrayList<String> ans = new ArrayList<>();
         // When
         if(questionType == 0){
-            if(object == null){
-                // Dont have object and action
-                if(action == null){
-                    ans.add("I am sorry, i don't understand your question");
-                } else {
-                    // when is running
-                    // when \VERB\
-                    ans.add("Who or what " + action + "Please tell me more");
-                }
-            } else {
-                // When is Kew
-                // when \NOUN\
-                if(action == null){
-                    ans.add("i am not sure what you are asking... Please tell me more about " + object);
-                } else {
-                    // When is Kew running
-                    // When \NOUN\ \VERB\
-                    for(int docIndex: topCosineSdocsIndex){
+            if(object != null && action != null) {
+                // When is Kew running
+                // When \NOUN\ \VERB\
+                for(int i = 0; i < topCosineSdocsIndex.length; i ++){
+                    if(topCosineSimis[i] > 0.9){
+                        int docIndex = topCosineSdocsIndex[i];
                         String doc = tfIdf.getDoc(docIndex);
                         String [] docTag = tagger.tag(doc);
                         String [] tks = ult.tokenize(doc);
                         String t = findTime(tks, docTag);
                         if(!t.isEmpty()){ ans.add(t); }
                     }
-
-                    if(ans.size() == 0){
-                        ans.add("i don't know when is " + object + " " + action + "... Please tell me");
-                    }
                 }
             }
-        // WWhat
+        // What
         } else if(questionType == 1) {
             if (object == null) {
-                if (action == null) {
-                    // don't have object and action
-                    // return "i do not understand your question"
-                    ans.add("i do not understand your question");
-                } else {
+                if (action != null) {
                     // What is Running?
                     // What is \VERB\?
                     // Search answer based on action
@@ -243,55 +223,47 @@ public class Question {
                         String [] docTag = tagger.tag(doc);
                         String [] tks = ult.tokenize(doc);
                         for(String d: findDef(tks, docTag, action, ult.nounTags)){
-                            defs.add(d);
+                            if(!defs.contains(d)){ defs.add(d); }
                         }
                     }
 
                     if(!defs.isEmpty()){
                         ans = defs;
-                    }
-
-                    //dont have object have this action
-                    // return "do have people do this action"
-                    if(ans.size() == 0){
-                        ans.add("is any one " + action + "? Please tell me more :)");
                     }
                 }
             } else {
                 if(action == null){
                     // what is Kew
                     // What is \NOUN\
-                    System.out.println("Searching defination for object ");
+                    System.out.println("Searching definition for object ");
                     ArrayList<String>defs = new ArrayList<>();
                     for(int docIndex: topCosineSdocsIndex){
                         String doc = tfIdf.getDoc(docIndex);
                         String [] docTag = tagger.tag(doc);
                         String [] tks = ult.tokenize(doc);
                         for(String d: findDef(tks, docTag, object, ult.nounTags)){
-                            defs.add(d);
+                            if(!defs.contains(d)){ defs.add(d); }
                         }
                     }
 
                     if(!defs.isEmpty()){
                         ans = defs;
                     }
-
-                    //dont have object have this action
-                    // return "do have people do this action"
-                    if(ans.size() == 0){
-                        ans.add("is any one " + action + "? Please tell me more :)");
-                    }
-
                 } else {
                     // What is Kew eating
                     // What is \NOUN\ \VERB\
                     ArrayList<String> target = new ArrayList<>();
-                    for(int docIndex: topCosineSdocsIndex){
-                        String doc = tfIdf.getDoc(docIndex);
-                        String [] docTag = tagger.tag(doc);
-                        String [] tks = ult.tokenize(doc);
-                        for(String d: findTarget(tks, docTag, action)){
-                            target.add(d);
+                    for(int i = 0; i < topCosineSdocsIndex.length; i ++){
+                        if(topCosineSimis[i] > 0.9){
+                            int docIndex = topCosineSdocsIndex[i];
+                            String doc = tfIdf.getDoc(docIndex);
+                            String [] docTag = tagger.tag(doc);
+                            String [] tks = ult.tokenize(doc);
+                            for(String d: findTarget(tks, docTag, object, action)){
+                                if(!target.contains(d)){
+                                    target.add(d);
+                                }
+                            }
                         }
                     }
 
@@ -301,10 +273,7 @@ public class Question {
         // Who
         } else if(questionType == 2){
             if(object == null){
-                if(action == null){
-                    // don't have object and action
-                    ans.add("i do not understand your question");
-                } else {
+                if(action != null){
                     // who is running
                     // who is \VERB\
                     System.out.println("Search object that doing that action");
@@ -321,49 +290,36 @@ public class Question {
                             }
                         }
                     }
-
-
-
                 }
             } else {
                 if(action == null){
                     // who is Kew?
                     // who is \NOUN\
+                    System.out.println("Search definition for object");
+                    ArrayList<String>defs = new ArrayList<>();
                     for(int docIndex: topCosineSdocsIndex){
                         String doc = tfIdf.getDoc(docIndex);
                         String [] docTag = tagger.tag(doc);
                         String [] tks = ult.tokenize(doc);
-                        ArrayList<String>defs = findDef(tks, docTag, object, ult.nounTags);
-                        if(!defs.isEmpty()){
-                            ans = defs;
+                        for(String d: findDef(tks, docTag, object, ult.nounTags)){
+                            if(!defs.contains(d)){ defs.add(d); }
                         }
                     }
 
-                    if(ans.size() == 0){
-                        ans.add("i don't know this person, Please tell me more about " + object);
+                    if(!defs.isEmpty()){
+                        ans = defs;
                     }
                 } else {
-                    // who is Kew running?
-                    ans.add("I am not sure what you are trying to ask :(");
+                    // who is Kew eating with?
+                    // who is eating apple?
+                    // Asking for another object doing the same action
                 }
             }
         // Why
         } else if(questionType == 3){
             System.out.println("Looking for reason");
-            if(object == null){
-                if(action == null){
-                    ans.add("I am sorry, i can't understand your question");
-                } else {
-                    // Why running
-                    // Why \VERB\
-                    ans.add("I am sorry, who " + action);
-                }
-            } else {
-                if(action == null){
-                    // Why Kew
-                    // Why \NOUN\
-                    ans.add("What happen to " + object + "?");
-                } else {
+            if(object != null){
+                if(action != null){
                     // Why is Kew running
                     // Why \NOUN\ \VERB\
                     ArrayList<String> reasons = new ArrayList<>();
@@ -378,21 +334,9 @@ public class Question {
                     if(reasons.size() > 0){ ans = reasons; }
                 }
             }
-
-            if(ans.size() == 0){
-                ans.add(object + " " + action + " without a reason, maybe you can tell me about that.");
-            }
         // Where
         } else if(questionType == 4){
-            if(object == null){
-                if(action == null){
-                    ans.add("I am sorry, i can't understand your question");
-                } else {
-                    // Where is running
-                    // Where \NOUN\
-                    ans.add("What or Who " + action + "? Please tell me more :)");
-                }
-            } else {
+            if(object != null){
                 // Where is Kew
                 // Where \NOUN\
                 // &
@@ -408,26 +352,20 @@ public class Question {
                 }
 
                 if(places.size() > 0){ ans = places; }
-
-                if(ans.size() == 0){
-                    ans.add("i don't know where is " + object + ". Please tell me..");
-                }
             }
         // How
         } else if(questionType == 5){
           //
         }
 
-//        System.out.println("ans for analysis v2:");
-
         // clean the ans first
+        preprocessAns(ans, topCosineSimis, topCosineSdocsIndex);
         mostReleventDoc = "";
         for(String a: ans){
             mostReleventDoc += a + "\n";
-//            System.out.println(a);
         }
 
-        if(ans.size() == 0){
+        if(mostReleventDoc.isEmpty()){
             mostReleventDoc = "i can't understand you :(";
         }
     }
@@ -638,9 +576,126 @@ public class Question {
         } else if(questionType == 4){
 
         }
-
-
     }
+
+    public static void preprocessAns(ArrayList<String>ans, double[] topCosineSimis, int [] topCosineSdocsIndex) {
+        if (ans.size() == 0) {
+            for (int i = 0; i < topCosineSimis.length; i++) {
+                double v = topCosineSimis[i];
+                if (v > 0.95) {
+                    ans.add(tfIdf.getDoc(topCosineSdocsIndex[i]));
+                }
+            }
+        }
+
+        if (ans.size() == 0) {
+            // when
+            if (questionType == 0) {
+                if (object == null) {
+                    // Dont have object and action
+                    if (action == null) {
+                        ans.add("I am sorry, i don't understand your question");
+                    } else {
+                        // when is running
+                        // when \VERB\
+                        ans.add("Who or what " + action + "Please tell me more");
+                    }
+                } else {
+                    // When is Kew
+                    // when \NOUN\
+                    if (action == null) {
+                        ans.add("i am not sure what you are asking... Please tell me more about " + object);
+                    } else {
+                        ans.add("i don't know when is " + object + " " + action + "... Please tell me");
+                    }
+                }
+                // what
+            } else if (questionType == 1) {
+                if (object == null) {
+                    if (action == null) {
+                        // don't have object and action
+                        // return "i do not understand your question"
+                        ans.add("i do not understand your question");
+                    } else {
+                        // What is Running?
+                        // What is \VERB\?
+                        // Search answer based on action
+                        ans.add("is any one " + action + "? Please tell me more :)");
+                    }
+                } else {
+                    if (action == null) {
+                        // what is Kew
+                        // What is \NOUN\
+                        ans.add("what is " + object + "? Please tell me more :)");
+                    } else {
+                        // What is Kew eating
+                        // What is \NOUN\ \VERB\
+                        ans.add("i am not sure.... is " + object + " " + action + " anything?");
+                    }
+                }
+            // Who
+            } else if (questionType == 2) {
+                if (object == null) {
+                    if (action == null) {
+                        // don't have object and action
+                        ans.add("i do not understand your question");
+                    }
+                } else {
+                    if (action == null) {
+                        if (ans.size() == 0) {
+                            ans.add("i don't know this person, Please tell me more about " + object);
+                        }
+                    } else {
+                        // who is Kew eating with?
+                        // who is eating apple?
+                        // Asking for another object doing the same action
+                        ans.add("i am not sure about that.... Please tell me more about " + object);
+                    }
+                }
+            // Why
+            } else if(questionType == 3){
+                if(object == null){
+                    if(action == null){
+                        ans.add("I am sorry, i can't understand your question");
+                    } else {
+                        // Why running
+                        // Why \VERB\
+                        ans.add("I am sorry, who " + action);
+                    }
+                } else {
+                    if(action == null){
+                        // Why Kew
+                        // Why \NOUN\
+                        ans.add("What happen to " + object + "?");
+                    } else {
+                        // Why is Kew running
+                        // Why \NOUN\ \VERB\
+                        ans.add(object + " " + action + " without a reason, maybe you can tell me about that.");
+                    }
+                }
+            // Where
+            } else if(questionType == 4){
+                if(object == null){
+                    if(action == null){
+                        ans.add("I am sorry, i can't understand your question");
+                    } else {
+                        // Where is running
+                        // Where \NOUN\
+                        ans.add("What or Who " + action + "? Please tell me more :)");
+                    }
+                } else {
+                    // Where is Kew
+                    // Where \NOUN\
+                    // &
+                    // Where is Kew running
+                    // Where \NOUN\ \VERB\
+                    ans.add("i don't know where is " + object + ". Please tell me..");
+                }
+            }
+        }
+    }
+
+
 
 
     public static String answer(){
@@ -669,25 +724,44 @@ public class Question {
         return false;
     }
 
-    public static ArrayList<String> findDef(String []tokens, String[]tags, String term, ArrayList<String >targetTags){
+    public static ArrayList<String> findDef(String []tokens, String[]tags, String term, ArrayList<String>targetTags){
         ArrayList<String> defs = new ArrayList<>();
-        for(int i = 0;i < tokens.length - 1; i++){
+        for(int i = 0;i < tokens.length; i++){
             String t = tokens[i];
             if(term.equalsIgnoreCase(t)){
-                t = tokens[i + 1];
-                if(singularVerb.contains(t) || pluralVerb.contains(t)){
-                    String def = "";
-                    for(int j = i + 2;j < tokens.length; j ++){
-                        // after is/are/was/were should have have verb for definition
-                        if(ult.verbTags.contains(tags[j])){ break; }
+                // attempt 1:
+                // get def after is
+                // eg: Kew is \DEF\
+                String def = "";
+                if(i + 1 < tokens.length && (singularVerb.contains(tokens[i + 1]) || pluralVerb.contains(tokens[i + 1]))){
+                    if(!ult.verbTags.contains(tags[i + 2])){
+                        // after is/are/was/were should not have verb for definition
+                        def = ult.arrayToSring(ult.subArray(tokens, i + 2, tokens.length));
+                    }
+                }
 
-                        if(!ult.verbTags.contains(tags[j])){
-                            def = ult.arrayToSring(ult.subArray(tokens, j, tokens.length));
+                // attempt 2:
+                // get def before is
+                // eg: \DEF\ is Kew
+                if(def.isEmpty()){
+                    for(int j = i - 1;j >= 0; j --){
+                        // A is B C
+                        // \NOUN\ is \NOUN\ \NOUN\
+                        // hence, B != A or A != B
+                        if(i + 1 < tokens.length && ult.nounTags.contains(tags[i + 1])){ break; }
+
+                        t = tokens[j];
+                        if(ult.verbTags.contains(tags[j]) && singularVerb.contains(t) || pluralVerb.contains(t)){
                             break;
                         }
+
+                        if(singularVerb.contains(t) || pluralVerb.contains(t)){
+                            def = ult.arrayToSring(ult.subArray(tokens, 0, j));
+                        }
                     }
-                    if(!def.isEmpty()){ defs.add(def); }
                 }
+
+                if(!def.isEmpty()){ defs.add(def); }
             }
         }
 
@@ -698,7 +772,7 @@ public class Question {
         ArrayList<String> obj = new ArrayList<>();
         for(int i = 0; i < tokens.length; i ++){
             String t = tokens[i];
-            if(t.equalsIgnoreCase(action)){
+            if(t.equalsIgnoreCase(action) && ult.isVerb(tokens, tags, i)){
                 for(int j = i; j >= 0; j --){
                     if(ult.nounTags.contains(tags[j])){
                         obj.add(tokens[j]);
@@ -711,15 +785,25 @@ public class Question {
         return obj;
     }
 
-    public static ArrayList<String> findTarget(String [] tokens, String [] tags, String action){
+    public static ArrayList<String> findTarget(String [] tokens, String [] tags, String object, String action){
         ArrayList<String> targets = new ArrayList<>();
-        for(int i = 0; i < tokens.length; i ++){
-            String t = tokens[i];
-            if(t.equalsIgnoreCase(action)){
-                for(int j = i; j < tokens.length; j ++){
-                    if(ult.nounTags.contains(tags[j])){
-                        targets.add(tokens[j]);
-                        break;
+        // sentence have object and action only look for target
+        if(ult.arrayToSring(tokens).contains(object) && ult.arrayToSring(tokens).contains(object)){
+            for(int i = 0; i < tokens.length; i ++){
+                String t = tokens[i];
+                if(t.equalsIgnoreCase(action)){
+                    for(int j = i + 1; j < tokens.length; j ++){
+                        if(ult.verbTags.contains(tags[j]) ||
+                                ult.locationWord.contains(tokens[j]) ||
+                                ult.timeWord.contains(tokens[j]) ||
+                                ult.prepositionTags.contains(tags[j])){
+                            break;
+                        }
+
+                        if(ult.nounTags.contains(tags[j])){
+                            targets.add(tokens[j]);
+                            break;
+                        }
                     }
                 }
             }
@@ -736,7 +820,7 @@ public class Question {
 
         for(int i = 0; i < tokens.length; i ++){
             String t = tokens[i];
-            if(t.equalsIgnoreCase("because")){
+            if(ult.reasonWords.contains(t)){
                 reason = ult.arrayToSring(ult.subArray(tokens, i, tokens.length));
                 break;
             }

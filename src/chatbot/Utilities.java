@@ -103,7 +103,9 @@ public class Utilities {
         add("how");
     }};
 
-
+    public static ArrayList <String> reasonWords = new ArrayList<String>() {{
+       add("because");
+    }};
 
     public Utilities(){}
     
@@ -171,6 +173,33 @@ public class Utilities {
         }
 
         return objectIndex;
+    }
+
+    public static String findObjectIndex(String [] tokens, String [] tags){
+        String obj = "";
+        // attempt one - the noun before verb as object
+        for(int i = 0; i < tokens.length; i ++){
+            if(commomWord.contains(tokens[i])){ continue; } // skip common word
+            if(verbTags.contains(tags[i])){
+                for(int j = i; j > 0; j -- ){
+                    if(nounTags.contains(tags[j])){
+                        obj =  tokens[j];
+                    }
+                }
+            }
+        }
+
+        // attempt two - grab the noun as object
+        if(obj.isEmpty()){
+            for(int i = 0; i < tokens.length; i ++){
+                if(nounTags.contains(tags[i]) && !timeWord.contains(tokens[i])){
+                    obj = tokens[i];
+                    break;
+                }
+            }
+        }
+
+        return obj;
     }
 
     public static ArrayList <Integer> findActionIndex(String [] tags, String [] tokens, String object){
@@ -294,6 +323,19 @@ public class Utilities {
             return false;
         }
 
+        return true;
+    }
+
+    public static boolean isVerb(String [] tokens, String [] tags, int verbIndex){
+        // first word, is not a verb
+        if(verbIndex == 0)
+            return false;
+        // next word is still a verb, not a verb
+        if(verbIndex + 1 < tokens.length){
+            if(verbTags.contains(tags[verbIndex + 1])){
+                return false;
+            }
+        }
         return true;
     }
 }
