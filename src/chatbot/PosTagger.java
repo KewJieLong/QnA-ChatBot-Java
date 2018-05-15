@@ -29,7 +29,7 @@ public class PosTagger {
         Utilities.printArray(token);
         return token;
     }
-    
+
     public static String[] tag(String[] token){
         String [] tagging = new String[token.length];
         

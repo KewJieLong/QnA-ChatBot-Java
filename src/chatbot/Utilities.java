@@ -64,6 +64,8 @@ public class Utilities {
     public static ArrayList<String> locationWord = new ArrayList<String> () {{
        add("in");
        add("at");
+       add("to");
+       add("from");
     }};
 
     public static ArrayList<String> timeWord = new ArrayList<String> () {{
@@ -74,6 +76,7 @@ public class Utilities {
     }};
 
     public static ArrayList <String> commomWord = new ArrayList<String>(){{
+        add("a");
         add("is");
         add("are");
         add("was");
@@ -101,10 +104,17 @@ public class Utilities {
         add("why");
         add("where");
         add("how");
+        add("do");
+        add("did");
+        add("is");
+        add("was");
+        add("were");
+        add("are");
     }};
 
     public static ArrayList <String> reasonWords = new ArrayList<String>() {{
-       add("because");
+        add("because");
+        add("due");
     }};
 
     public Utilities(){}
@@ -176,7 +186,7 @@ public class Utilities {
     }
 
     public static String findObjectIndex(String [] tokens, String [] tags){
-        String obj = "";
+        String obj = null;
         // attempt one - the noun before verb as object
         for(int i = 0; i < tokens.length; i ++){
             if(commomWord.contains(tokens[i])){ continue; } // skip common word
@@ -190,10 +200,12 @@ public class Utilities {
         }
 
         // attempt two - grab the noun as object
-        if(obj.isEmpty()){
+        if(obj == null){
             for(int i = 0; i < tokens.length; i ++){
-                if(nounTags.contains(tags[i]) && !timeWord.contains(tokens[i])){
-                    obj = tokens[i];
+                if(nounTags.contains(tags[i])){
+                    if(i - 1 >= 0 && !locationWord.contains(tokens[i - 1])){
+                        obj = tokens[i];
+                    }
                     break;
                 }
             }
@@ -337,5 +349,13 @@ public class Utilities {
             }
         }
         return true;
+    }
+
+    public static boolean isNegative(String doc){
+        if(doc.toLowerCase().contains("no") || doc.toLowerCase().contains("not")
+                || doc.toLowerCase().contains("never")){
+            return true;
+        }
+        return false;
     }
 }

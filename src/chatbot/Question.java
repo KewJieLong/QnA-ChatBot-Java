@@ -27,6 +27,12 @@ public class Question {
     // 3 --> why
     // 4 --> where
     // 5 --> how
+    // 6 --> do
+    // 7 --> did
+    // 8 --> is
+    // 9 --> was
+    // 10 -> were
+    // 11 -> are
     private static String object;
     private static String action;
     private static String target;
@@ -128,6 +134,10 @@ public class Question {
                 // calculate TfIDF for query
                 queryTfIDF[indexToken] = TFIDF.calTfIDF(tfDoc.get(t), t);
             }
+
+            if(ult.isNegative(ult.arrayToSring(tokens))){
+                queryTfIDF[indexToken] *= -1;
+            }
         }
 
         // calculate vector length for docs
@@ -140,6 +150,9 @@ public class Question {
                 }
             }
             docsVectorLength[i] = Math.sqrt(sum);
+            if(ult.isNegative(TFIDF.getDoc(i))){
+                docsVectorLength[i] *= -1;
+            }
         }
 
         // calculate vector length for query
@@ -278,15 +291,15 @@ public class Question {
                     // who is \VERB\
                     System.out.println("Search object that doing that action");
                     for(int i = 0; i < topCosineSdocsIndex.length; i ++){
-                        int docIndex = topCosineSdocsIndex[i];
-                        if (Double.isNaN(topCosineSimis[i])){
-                            break;
-                        }
-                        String doc = tfIdf.getDoc(docIndex);
-                        ArrayList<String>object = findObj(ult.tokenize(doc), tagger.tag(doc), action);
-                        if(object.size() != 0){
-                            for(String o: object){
-                                if(!ans.contains(o)){ ans.add(o); }
+                        if(topCosineSimis[i] > 0.8){
+                            int docIndex = topCosineSdocsIndex[i];
+                            String doc = tfIdf.getDoc(docIndex);
+                            if(!doc.contains(action)){ continue; }
+                            ArrayList<String>object = findObj(ult.tokenize(doc), tagger.tag(doc), action);
+                            if(object.size() != 0){
+                                for(String o: object){
+                                    if(!ans.contains(o)){ ans.add(o); }
+                                }
                             }
                         }
                     }
@@ -319,7 +332,7 @@ public class Question {
         } else if(questionType == 3){
             System.out.println("Looking for reason");
             if(object != null){
-                if(action != null){
+                if(action != null || adjective != null){
                     // Why is Kew running
                     // Why \NOUN\ \VERB\
                     ArrayList<String> reasons = new ArrayList<>();
@@ -347,7 +360,7 @@ public class Question {
                     String doc = tfIdf.getDoc(docIndex);
                     String [] docTag = tagger.tag(doc);
                     String [] tks = ult.tokenize(doc);
-                    String place = findPlace(tks, docTag);
+                    String place = findPlace(tks, docTag, object);
                     if(!place.isEmpty()){ places.add(place); }
                 }
 
@@ -355,7 +368,47 @@ public class Question {
             }
         // How
         } else if(questionType == 5){
-          //
+            for(int i = 0; i < topCosineSdocsIndex.length; i ++) {
+                int docIndex = topCosineSdocsIndex[i];
+                if (topCosineSimis[i] > 0.8) {
+                    String doc = tfIdf.getDoc(docIndex);
+                    if(!doc.contains(object)){ continue; }
+                    ans.add(doc);
+                    break;
+                }
+            }
+        } else if(questionType >= 6){
+            if(object != null){
+                if(action != null){
+                    for(int i = 0; i < topCosineSdocsIndex.length; i ++) {
+                        int docIndex = topCosineSdocsIndex[i];
+                        if (topCosineSimis[i] > 0.7) {
+                            String doc = tfIdf.getDoc(docIndex);
+                            System.out.println(doc);
+                            if(!doc.contains(object) || !doc.contains(action)){ continue; }
+                            ans.add("Yes");
+                            break;
+                        } else {
+                            ans.add("No");
+                            break;
+                        }
+                    }
+                } else {
+                    for(int i = 0; i < topCosineSdocsIndex.length; i ++) {
+                        int docIndex = topCosineSdocsIndex[i];
+                        if (topCosineSimis[i] > 0.7) {
+                            String doc = tfIdf.getDoc(docIndex);
+                            System.out.println(doc);
+                            if(!doc.contains(object)){ continue; }
+                            ans.add("Yes");
+                            break;
+                        } else {
+                            ans.add("No");
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         // clean the ans first
@@ -366,7 +419,7 @@ public class Question {
         }
 
         if(mostReleventDoc.isEmpty()){
-            mostReleventDoc = "i can't understand you :(";
+            mostReleventDoc = "Sorry :(, i don't have confidence to answer you, Please tell me more detail about the question :(";
         }
     }
 
@@ -582,7 +635,7 @@ public class Question {
         if (ans.size() == 0) {
             for (int i = 0; i < topCosineSimis.length; i++) {
                 double v = topCosineSimis[i];
-                if (v > 0.95) {
+                if (v > 0.9) {
                     ans.add(tfIdf.getDoc(topCosineSdocsIndex[i]));
                 }
             }
@@ -736,27 +789,40 @@ public class Question {
                 if(i + 1 < tokens.length && (singularVerb.contains(tokens[i + 1]) || pluralVerb.contains(tokens[i + 1]))){
                     if(!ult.verbTags.contains(tags[i + 2])){
                         // after is/are/was/were should not have verb for definition
-                        def = ult.arrayToSring(ult.subArray(tokens, i + 2, tokens.length));
+                        for(int j = i + 2; j < tokens.length; j ++){
+                            if(ult.reasonWords.contains(tokens[j])){
+                                def = ult.arrayToSring(ult.subArray(tokens, i + 2, j));
+                                break;
+                            }
+                        }
+
+                        // if no reason word occur, take the definition until the end of sentence
+                        if(def.isEmpty()){
+                            def = ult.arrayToSring(ult.subArray(tokens, i + 2, tokens.length));
+                        }
                     }
                 }
 
                 // attempt 2:
                 // get def before is
                 // eg: \DEF\ is Kew
+//                System.out.println("ATTEMPT 2 : " + def);
                 if(def.isEmpty()){
                     for(int j = i - 1;j >= 0; j --){
                         // A is B C
                         // \NOUN\ is \NOUN\ \NOUN\
                         // hence, B != A or A != B
                         if(i + 1 < tokens.length && ult.nounTags.contains(tags[i + 1])){ break; }
-
                         t = tokens[j];
-                        if(ult.verbTags.contains(tags[j]) && singularVerb.contains(t) || pluralVerb.contains(t)){
+                        if(singularVerb.contains(t) || pluralVerb.contains(t)){
+                            def = ult.arrayToSring(ult.subArray(tokens, 0, j));
                             break;
                         }
 
-                        if(singularVerb.contains(t) || pluralVerb.contains(t)){
-                            def = ult.arrayToSring(ult.subArray(tokens, 0, j));
+                        if(ult.isCommonWord(t)){ continue; }
+
+                        if(ult.verbTags.contains(tags[j])){
+                            break;
                         }
                     }
                 }
@@ -820,7 +886,8 @@ public class Question {
 
         for(int i = 0; i < tokens.length; i ++){
             String t = tokens[i];
-            if(ult.reasonWords.contains(t)){
+            System.out.println(t);
+            if(ult.reasonWords.contains(t.toLowerCase())){
                 reason = ult.arrayToSring(ult.subArray(tokens, i, tokens.length));
                 break;
             }
@@ -829,11 +896,15 @@ public class Question {
         return reason;
     }
 
-    public static String findPlace(String[] tokens, String[] tags){
+    public static String findPlace(String[] tokens, String[] tags, String object){
         String place = "";
+        // if doc don't have object, mean it is not relevent to the query
+        if(!ult.arrayToSring(tokens).contains(object)){ return ""; }
         for(int i = 0; i < tokens.length; i ++){
             if(ult.locationWord.contains(tokens[i].toLowerCase())){
                 for(int j = i + 1; j < tokens.length; j ++){
+                    System.out.println(tokens[j]);
+                    System.out.println(tags[j]);
                     if(ult.nounTags.contains(tags[j]) && !ult.isNumeric(tokens[j]) && !ult.timeWord.contains(tokens[j])){
                         int stopIndex = j;
                         for(int k = j; k < tokens.length; k ++){

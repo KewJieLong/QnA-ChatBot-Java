@@ -99,12 +99,10 @@ public class Core {
 //    }
     
     public static int isAsking(String [] token){
-        for(String t: token){
-            if(ult.questionWords.contains(t.toLowerCase())){
-                System.out.printf("Asking word:");
-                System.out.println(t);
-                return ult.questionWords.indexOf(t.toLowerCase());
-            }
+        if(token.length > 0 && ult.questionWords.contains(token[0].toLowerCase())){
+            System.out.printf("Asking word:");
+            System.out.println(token[0]);
+            return ult.questionWords.indexOf(token[0].toLowerCase());
         }
         return -1;
     }
